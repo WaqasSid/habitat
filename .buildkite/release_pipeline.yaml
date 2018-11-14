@@ -32,12 +32,7 @@ steps:
       - docker#v2.0.0:
           image: "chefes/windows-base:latest"
           shell: [ "powershell", "-Command" ]
-          debug: true
           propagate-environment: true
-          workdir: "C:\\workdir"
-          volumes:
-            - "$BUILDKITE_PLUGIN_DOCKER_WORKDIR:C:\\workdir"
-            # - "C:\\buildkite-agent\\bin:C:\\buildkite-agent\\bin"
 
   - label: ":mac: :habicat: core/hab"
     command: .buildkite/scripts/build_mac_release.sh

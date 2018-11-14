@@ -18,6 +18,9 @@ if($Component.Equals("")) {
     Write-Error "--- :error: Component to build not specified, please use the -Component flag" -ErrorAction Stop
 }
 
+# install buildkite agent because we are in a container :(
+Invoke-Expression "$Env:buildkiteAgentToken='faketoken' ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/buildkite/agent/master/install.ps1'))"
+
 $thingy = Get-ChildItem -Path "C:\" -Filter "buildkite-agent" -Recurse -ErrorAction SilentlyContinue -Force
 Write-Host "--- THING: $thingy"
 
