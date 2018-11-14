@@ -32,17 +32,15 @@ use serde::Serialize;
 use serde_json;
 
 use hcore::package::PackageInstall;
-use hcore::service::ServiceGroup;
 pub use self::context::RenderContext;
 use error::{Error, Result};
 
 pub fn compile_from_package_install(package: &PackageInstall) -> Result<()> {
     let pkg = package::Pkg::from_install(package.clone())?;
-    let service_group = ServiceGroup::new(None, pkg.name.clone(), "_", None)?;
     let hooks = hooks::HookTable::load(
-        &service_group,
+        &pkg.name,
         pkg.path.join("hooks"),
-        fs::svc_hooks_path(&service_group.service()),
+        fs::svc_hooks_path(&pkg.name),
     );
 
 
@@ -52,7 +50,7 @@ pub fn compile_from_package_install(package: &PackageInstall) -> Result<()> {
     let ctx = RenderContext::new(&pkg, &cfg);
     let cfg_renderer = config::CfgRenderer::new(pkg.path.join("config"))?;
     cfg_renderer.compile(&pkg, &ctx)?;
-    hooks.compile(&service_group, &ctx);
+    hooks.compile(&pkg.name, &ctx);
 
     Ok(())
 }

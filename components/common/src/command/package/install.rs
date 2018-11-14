@@ -53,7 +53,6 @@ use hcore::fs::pkg_install_path;
 use hcore::package::list::temp_package_directory;
 use hcore::package::metadata::PackageType;
 use hcore::package::{Identifiable, PackageArchive, PackageIdent, PackageInstall, PackageTarget};
-use hcore::service::ServiceGroup;
 use hyper::status::StatusCode;
 
 use error::{Error, Result};
@@ -841,11 +840,10 @@ impl<'a> InstallTask<'a> {
     {
         templating::compile_from_package_install(package)?;
         let pkg = templating::package::Pkg::from_install(package.clone())?;
-        let service_group = ServiceGroup::new(None, pkg.name.clone(), "_", None)?;
         let hooks = templating::hooks::HookTable::load(
-            &service_group,
+            &pkg.name,
             pkg.path.join("hooks"),
-            templating::fs::svc_hooks_path(&service_group.service()),
+            templating::fs::svc_hooks_path(&pkg.name),
         );
 
         if let Some(ref hook) = hooks.install {
@@ -853,7 +851,7 @@ impl<'a> InstallTask<'a> {
                 Status::Applying,
                 format!("executing install hook for '{}'", &pkg.ident,),
             )?;
-            hook.run(&service_group, &pkg, None::<String>);
+            hook.run(&pkg.name, &pkg, None::<String>);
             ui.status(
                 Status::Installed,
                 format!("install hook for '{}' completed", &pkg.ident,),

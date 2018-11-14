@@ -24,7 +24,6 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, ExitStatus};
 use std::result;
 
-use hcore::service::ServiceGroup;
 use hcore::{self, crypto};
 use serde::{Serialize, Serializer};
 
@@ -37,18 +36,18 @@ use super::sys::exec;
 pub const HOOK_PERMISSIONS: u32 = 0o755;
 static LOGKEY: &'static str = "HK";
 
-pub fn stdout_log_path<T>(service_group: &ServiceGroup) -> PathBuf
+pub fn stdout_log_path<T>(package_name: &str) -> PathBuf
 where
     T: Hook,
 {
-    fs::svc_logs_path(service_group.service()).join(format!("{}.stdout.log", T::file_name()))
+    fs::svc_logs_path(package_name).join(format!("{}.stdout.log", T::file_name()))
 }
 
-pub fn stderr_log_path<T>(service_group: &ServiceGroup) -> PathBuf
+pub fn stderr_log_path<T>(package_name: &str) -> PathBuf
 where
     T: Hook,
 {
-    fs::svc_logs_path(service_group.service()).join(format!("{}.stderr.log", T::file_name()))
+    fs::svc_logs_path(package_name).join(format!("{}.stderr.log", T::file_name()))
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -65,7 +64,7 @@ pub trait Hook: fmt::Debug + Sized {
 
     fn file_name() -> &'static str;
 
-    fn load<C, T>(service_group: &ServiceGroup, concrete_path: C, template_path: T) -> Option<Self>
+    fn load<C, T>(package_name: &str, concrete_path: C, template_path: T) -> Option<Self>
     where
         C: AsRef<Path>,
         T: AsRef<Path>,
@@ -77,11 +76,11 @@ pub trait Hook: fmt::Debug + Sized {
                 let pair = match RenderPair::new(concrete, &template) {
                     Ok(pair) => pair,
                     Err(err) => {
-                        outputln!(preamble service_group, "Failed to load hook: {}", err);
+                        outputln!(preamble package_name, "Failed to load hook: {}", err);
                         return None;
                     }
                 };
-                Some(Self::new(service_group, pair))
+                Some(Self::new(package_name, pair))
             }
             Err(_) => {
                 debug!(
@@ -94,12 +93,12 @@ pub trait Hook: fmt::Debug + Sized {
         }
     }
 
-    fn new(service_group: &ServiceGroup, render_pair: RenderPair) -> Self;
+    fn new(package_name: &str, render_pair: RenderPair) -> Self;
 
     /// Compile a hook into its destination service directory.
     ///
     /// Returns `true` if the hook has changed.
-    fn compile(&self, service_group: &ServiceGroup, ctx: &RenderContext) -> Result<bool> {
+    fn compile(&self, service_group: &str, ctx: &RenderContext) -> Result<bool> {
         let content = self.renderer().render(Self::file_name(), ctx)?;
         if write_hook(&content, self.path())? {
             outputln!(preamble service_group,
@@ -134,7 +133,7 @@ pub trait Hook: fmt::Debug + Sized {
     /// Run a compiled hook.
     fn run<T>(
         &self,
-        service_group: &ServiceGroup,
+        service_group: &str,
         pkg: &Pkg,
         svc_encrypted_password: Option<T>,
     ) -> Self::ExitValue
@@ -163,7 +162,7 @@ pub trait Hook: fmt::Debug + Sized {
 
     fn handle_exit<'a>(
         &self,
-        group: &ServiceGroup,
+        group: &str,
         output: &'a HookOutput,
         status: &ExitStatus,
     ) -> Self::ExitValue;
@@ -191,17 +190,17 @@ impl Hook for FileUpdatedHook {
         "file_updated"
     }
 
-    fn new(service_group: &ServiceGroup, pair: RenderPair) -> Self {
+    fn new(package_name: &str, pair: RenderPair) -> Self {
         FileUpdatedHook {
             render_pair: pair,
-            stdout_log_path: stdout_log_path::<Self>(service_group),
-            stderr_log_path: stderr_log_path::<Self>(service_group),
+            stdout_log_path: stdout_log_path::<Self>(package_name),
+            stderr_log_path: stderr_log_path::<Self>(package_name),
         }
     }
 
     fn handle_exit<'a>(
         &self,
-        _: &ServiceGroup,
+        _: &str,
         _: &'a HookOutput,
         status: &ExitStatus,
     ) -> Self::ExitValue {
@@ -239,17 +238,17 @@ impl Hook for HealthCheckHook {
         "health_check"
     }
 
-    fn new(service_group: &ServiceGroup, pair: RenderPair) -> Self {
+    fn new(package_name: &str, pair: RenderPair) -> Self {
         HealthCheckHook {
             render_pair: pair,
-            stdout_log_path: stdout_log_path::<Self>(service_group),
-            stderr_log_path: stderr_log_path::<Self>(service_group),
+            stdout_log_path: stdout_log_path::<Self>(package_name),
+            stderr_log_path: stderr_log_path::<Self>(package_name),
         }
     }
 
     fn handle_exit<'a>(
         &self,
-        service_group: &ServiceGroup,
+        service_group: &str,
         _: &'a HookOutput,
         status: &ExitStatus,
     ) -> Self::ExitValue {
@@ -302,17 +301,17 @@ impl Hook for InitHook {
         "init"
     }
 
-    fn new(service_group: &ServiceGroup, pair: RenderPair) -> Self {
+    fn new(package_name: &str, pair: RenderPair) -> Self {
         InitHook {
             render_pair: pair,
-            stdout_log_path: stdout_log_path::<Self>(service_group),
-            stderr_log_path: stderr_log_path::<Self>(service_group),
+            stdout_log_path: stdout_log_path::<Self>(package_name),
+            stderr_log_path: stderr_log_path::<Self>(package_name),
         }
     }
 
     fn handle_exit<'a>(
         &self,
-        service_group: &ServiceGroup,
+        service_group: &str,
         _: &'a HookOutput,
         status: &ExitStatus,
     ) -> Self::ExitValue {
@@ -362,17 +361,17 @@ impl Hook for InstallHook {
         "install"
     }
 
-    fn new(service_group: &ServiceGroup, pair: RenderPair) -> Self {
+    fn new(package_name: &str, pair: RenderPair) -> Self {
         InstallHook {
             render_pair: pair,
-            stdout_log_path: stdout_log_path::<Self>(service_group),
-            stderr_log_path: stderr_log_path::<Self>(service_group),
+            stdout_log_path: stdout_log_path::<Self>(package_name),
+            stderr_log_path: stderr_log_path::<Self>(package_name),
         }
     }
 
     fn handle_exit<'a>(
         &self,
-        service_group: &ServiceGroup,
+        service_group: &str,
         _: &'a HookOutput,
         status: &ExitStatus,
     ) -> Self::ExitValue {
@@ -422,15 +421,15 @@ impl Hook for RunHook {
         "run"
     }
 
-    fn new(service_group: &ServiceGroup, pair: RenderPair) -> Self {
+    fn new(package_name: &str, pair: RenderPair) -> Self {
         RunHook {
             render_pair: pair,
-            stdout_log_path: stdout_log_path::<Self>(service_group),
-            stderr_log_path: stderr_log_path::<Self>(service_group),
+            stdout_log_path: stdout_log_path::<Self>(package_name),
+            stderr_log_path: stderr_log_path::<Self>(package_name),
         }
     }
 
-    fn run<T>(&self, _: &ServiceGroup, _: &Pkg, _: Option<T>) -> Self::ExitValue
+    fn run<T>(&self, _: &str, _: &Pkg, _: Option<T>) -> Self::ExitValue
     where
         T: ToString,
     {
@@ -442,7 +441,7 @@ impl Hook for RunHook {
 
     fn handle_exit<'a>(
         &self,
-        service_group: &ServiceGroup,
+        service_group: &str,
         _: &'a HookOutput,
         status: &ExitStatus,
     ) -> Self::ExitValue {
@@ -487,17 +486,17 @@ impl Hook for PostRunHook {
         "post-run"
     }
 
-    fn new(service_group: &ServiceGroup, pair: RenderPair) -> Self {
+    fn new(package_name: &str, pair: RenderPair) -> Self {
         PostRunHook {
             render_pair: pair,
-            stdout_log_path: stdout_log_path::<Self>(service_group),
-            stderr_log_path: stderr_log_path::<Self>(service_group),
+            stdout_log_path: stdout_log_path::<Self>(package_name),
+            stderr_log_path: stderr_log_path::<Self>(package_name),
         }
     }
 
     fn handle_exit<'a>(
         &self,
-        service_group: &ServiceGroup,
+        service_group: &str,
         _: &'a HookOutput,
         status: &ExitStatus,
     ) -> Self::ExitValue {
@@ -542,17 +541,17 @@ impl Hook for ReloadHook {
         "reload"
     }
 
-    fn new(service_group: &ServiceGroup, pair: RenderPair) -> Self {
+    fn new(package_name: &str, pair: RenderPair) -> Self {
         ReloadHook {
             render_pair: pair,
-            stdout_log_path: stdout_log_path::<Self>(service_group),
-            stderr_log_path: stderr_log_path::<Self>(service_group),
+            stdout_log_path: stdout_log_path::<Self>(package_name),
+            stderr_log_path: stderr_log_path::<Self>(package_name),
         }
     }
 
     fn handle_exit<'a>(
         &self,
-        service_group: &ServiceGroup,
+        service_group: &str,
         _: &'a HookOutput,
         status: &ExitStatus,
     ) -> Self::ExitValue {
@@ -602,17 +601,17 @@ impl Hook for ReconfigureHook {
         "reconfigure"
     }
 
-    fn new(service_group: &ServiceGroup, pair: RenderPair) -> Self {
+    fn new(package_name: &str, pair: RenderPair) -> Self {
         ReconfigureHook {
             render_pair: pair,
-            stdout_log_path: stdout_log_path::<Self>(service_group),
-            stderr_log_path: stderr_log_path::<Self>(service_group),
+            stdout_log_path: stdout_log_path::<Self>(package_name),
+            stderr_log_path: stderr_log_path::<Self>(package_name),
         }
     }
 
     fn handle_exit<'a>(
         &self,
-        service_group: &ServiceGroup,
+        service_group: &str,
         _: &'a HookOutput,
         status: &ExitStatus,
     ) -> Self::ExitValue {
@@ -657,17 +656,17 @@ impl Hook for SmokeTestHook {
         "smoke_test"
     }
 
-    fn new(service_group: &ServiceGroup, pair: RenderPair) -> Self {
+    fn new(package_name: &str, pair: RenderPair) -> Self {
         SmokeTestHook {
             render_pair: pair,
-            stdout_log_path: stdout_log_path::<Self>(service_group),
-            stderr_log_path: stderr_log_path::<Self>(service_group),
+            stdout_log_path: stdout_log_path::<Self>(package_name),
+            stderr_log_path: stderr_log_path::<Self>(package_name),
         }
     }
 
     fn handle_exit<'a>(
         &self,
-        service_group: &ServiceGroup,
+        service_group: &str,
         _: &'a HookOutput,
         status: &ExitStatus,
     ) -> Self::ExitValue {
@@ -713,17 +712,17 @@ impl Hook for SuitabilityHook {
         "suitability"
     }
 
-    fn new(service_group: &ServiceGroup, pair: RenderPair) -> Self {
+    fn new(package_name: &str, pair: RenderPair) -> Self {
         SuitabilityHook {
             render_pair: pair,
-            stdout_log_path: stdout_log_path::<Self>(service_group),
-            stderr_log_path: stderr_log_path::<Self>(service_group),
+            stdout_log_path: stdout_log_path::<Self>(package_name),
+            stderr_log_path: stderr_log_path::<Self>(package_name),
         }
     }
 
     fn handle_exit<'a>(
         &self,
-        service_group: &ServiceGroup,
+        service_group: &str,
         hook_output: &'a HookOutput,
         status: &ExitStatus,
     ) -> Self::ExitValue {
@@ -799,17 +798,17 @@ impl Hook for PostStopHook {
         "post-stop"
     }
 
-    fn new(service_group: &ServiceGroup, pair: RenderPair) -> Self {
+    fn new(package_name: &str, pair: RenderPair) -> Self {
         PostStopHook {
             render_pair: pair,
-            stdout_log_path: stdout_log_path::<Self>(service_group),
-            stderr_log_path: stderr_log_path::<Self>(service_group),
+            stdout_log_path: stdout_log_path::<Self>(package_name),
+            stderr_log_path: stderr_log_path::<Self>(package_name),
         }
     }
 
     fn handle_exit<'a>(
         &self,
-        service_group: &ServiceGroup,
+        service_group: &str,
         _: &'a HookOutput,
         status: &ExitStatus,
     ) -> Self::ExitValue {
@@ -893,7 +892,7 @@ pub struct HookTable {
 
 impl HookTable {
     /// Read all available hook templates from the table's package directory into the table.
-    pub fn load<P, T>(service_group: &ServiceGroup, templates: T, hooks_path: P) -> Self
+    pub fn load<P, T>(package_name: &str, templates: T, hooks_path: P) -> Self
     where
         P: AsRef<Path>,
         T: AsRef<Path>,
@@ -901,22 +900,22 @@ impl HookTable {
         let mut table = HookTable::default();
         if let Some(meta) = std::fs::metadata(templates.as_ref()).ok() {
             if meta.is_dir() {
-                table.file_updated = FileUpdatedHook::load(service_group, &hooks_path, &templates);
-                table.health_check = HealthCheckHook::load(service_group, &hooks_path, &templates);
-                table.suitability = SuitabilityHook::load(service_group, &hooks_path, &templates);
-                table.init = InitHook::load(service_group, &hooks_path, &templates);
-                table.install = InstallHook::load(service_group, &hooks_path, &templates);
-                table.reload = ReloadHook::load(service_group, &hooks_path, &templates);
-                table.reconfigure = ReconfigureHook::load(service_group, &hooks_path, &templates);
-                table.run = RunHook::load(service_group, &hooks_path, &templates);
-                table.post_run = PostRunHook::load(service_group, &hooks_path, &templates);
-                table.smoke_test = SmokeTestHook::load(service_group, &hooks_path, &templates);
-                table.post_stop = PostStopHook::load(service_group, &hooks_path, &templates);
+                table.file_updated = FileUpdatedHook::load(package_name, &hooks_path, &templates);
+                table.health_check = HealthCheckHook::load(package_name, &hooks_path, &templates);
+                table.suitability = SuitabilityHook::load(package_name, &hooks_path, &templates);
+                table.init = InitHook::load(package_name, &hooks_path, &templates);
+                table.install = InstallHook::load(package_name, &hooks_path, &templates);
+                table.reload = ReloadHook::load(package_name, &hooks_path, &templates);
+                table.reconfigure = ReconfigureHook::load(package_name, &hooks_path, &templates);
+                table.run = RunHook::load(package_name, &hooks_path, &templates);
+                table.post_run = PostRunHook::load(package_name, &hooks_path, &templates);
+                table.smoke_test = SmokeTestHook::load(package_name, &hooks_path, &templates);
+                table.post_stop = PostStopHook::load(package_name, &hooks_path, &templates);
             }
         }
         debug!(
             "{}, Hooks loaded, destination={}, templates={}",
-            service_group,
+            package_name,
             hooks_path.as_ref().display(),
             templates.as_ref().display()
         );
@@ -927,7 +926,7 @@ impl HookTable {
     ///
     /// Returns `true` if compiling any of the hooks resulted in new
     /// content being written to the hook scripts on disk.
-    pub fn compile(&self, service_group: &ServiceGroup, ctx: &RenderContext) -> bool {
+    pub fn compile(&self, service_group: &str, ctx: &RenderContext) -> bool {
         debug!("{:?}", self);
         let mut changed = false;
         if let Some(ref hook) = self.file_updated {
@@ -966,7 +965,7 @@ impl HookTable {
         changed
     }
 
-    fn compile_one<H>(&self, hook: &H, service_group: &ServiceGroup, ctx: &RenderContext) -> bool
+    fn compile_one<H>(&self, hook: &H, service_group: &str, ctx: &RenderContext) -> bool
     where
         H: Hook,
     {
@@ -1050,7 +1049,7 @@ impl<'a> HookOutput<'a> {
         }
     }
 
-    fn stream_output<H: Hook>(&mut self, service_group: &ServiceGroup, process: &mut Child) {
+    fn stream_output<H: Hook>(&mut self, service_group: &str, process: &mut Child) {
         let mut stdout_log =
             File::create(&self.stdout_log_file).expect("couldn't create log output file");
         let mut stderr_log =
@@ -1079,7 +1078,7 @@ impl<'a> HookOutput<'a> {
         }
     }
 
-    fn stream_preamble<H: Hook>(&self, service_group: &ServiceGroup) -> String {
+    fn stream_preamble<H: Hook>(&self, service_group: &str) -> String {
         format!("{} hook[{}]:", service_group, H::file_name())
     }
 }
