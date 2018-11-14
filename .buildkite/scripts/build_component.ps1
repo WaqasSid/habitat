@@ -19,7 +19,7 @@ if($Component.Equals("")) {
 }
 
 # install buildkite agent because we are in a container :(
-$Env:BUILDKITE_AGENT_ACCESS_TOKEN
+$Env:buildkiteAgentToken = $Env:BUILDKITE_AGENT_ACCESS_TOKEN
 Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/buildkite/agent/master/install.ps1'))
 
 
