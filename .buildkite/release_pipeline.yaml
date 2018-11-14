@@ -33,7 +33,8 @@ steps:
           image: "chefes/windows-base:latest"
           shell: [ "powershell", "-Command" ]
           propagate-environment: true
-          mount-buildkite-agent: true
+          volumes:
+            - "C:\buildkite-agent\bin\buildkite-agent:C:\buildkite-agent\bin\buildkite-agent"
 
   - label: ":mac: :habicat: core/hab"
     command: .buildkite/scripts/build_mac_release.sh
