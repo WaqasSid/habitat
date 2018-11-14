@@ -34,8 +34,9 @@ steps:
           shell: [ "powershell", "-Command" ]
           debug: true
           propagate-environment: true
-          # volumes:
-          #   - "$PWD:C:\\workdir"
+          workdir: "C:\\workdir"
+          volumes:
+            - "$PWD:C:\\workdir"
             # - "C:\\buildkite-agent\\bin:C:\\buildkite-agent\\bin"
 
   - label: ":mac: :habicat: core/hab"
