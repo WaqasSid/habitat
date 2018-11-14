@@ -23,7 +23,7 @@ Set-Item Env:buildkiteAgentToken -Value "faketoken"
 Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/buildkite/agent/master/install.ps1'))
 Remove-Item Env:buildkiteAgentToken
 
-$thingy = Invoke-Expression "buildkite-agent meta-data get 'version'"
+$thingy = Invoke-Expression "buildkite-agent meta-data get version"
 Write-Host "THING: $thingy"
 
 # Write-Host "--- Setting source package channel to $SourceChannel"
