@@ -19,7 +19,7 @@ if($Component.Equals("")) {
 }
 
 # install buildkite agent because we are in a container :(
-Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/buildkite/agent/master/install.ps1'))
+$env:buildkiteAgentToken="faketoken" Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/buildkite/agent/master/install.ps1'))
 
 $thingy = Get-ChildItem -Path "C:\" -Filter "buildkite-agent.exe" -Recurse -ErrorAction SilentlyContinue -Force
 Write-Host "--- THING: $thingy"
