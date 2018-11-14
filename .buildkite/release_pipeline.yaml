@@ -32,9 +32,8 @@ steps:
       - docker#v2.0.0:
           image: "chefes/windows-base:latest"
           shell: [ "powershell", "-Command" ]
-          environment:
-            - HAB_BLDR_CHANNEL
-            - HAB_AUTH_TOKEN
+          propagate-environment: true
+          mount-buildkite-agent: true
 
   - label: ":mac: :habicat: core/hab"
     command: .buildkite/scripts/build_mac_release.sh
@@ -63,6 +62,7 @@ steps:
 
   - label: ":windows: :habicat: :hammer_and_wrench: core/hab-plan-build-ps1"
     command: .buildkite/scripts/build_component.ps1 -Component plan-build-ps1 -SourceChannel unstable -BaseHabVersion "0.68.0/20181108152053"
+    skip: "Testing Windows builds"
     agents:
       queue: default-windows
     env:
