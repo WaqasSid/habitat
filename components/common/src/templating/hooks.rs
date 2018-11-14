@@ -880,6 +880,7 @@ where
 pub struct HookTable {
     pub health_check: Option<HealthCheckHook>,
     pub init: Option<InitHook>,
+    pub install: Option<InstallHook>,
     pub file_updated: Option<FileUpdatedHook>,
     pub reload: Option<ReloadHook>,
     pub reconfigure: Option<ReconfigureHook>,
@@ -904,6 +905,7 @@ impl HookTable {
                 table.health_check = HealthCheckHook::load(service_group, &hooks_path, &templates);
                 table.suitability = SuitabilityHook::load(service_group, &hooks_path, &templates);
                 table.init = InitHook::load(service_group, &hooks_path, &templates);
+                table.install = InstallHook::load(service_group, &hooks_path, &templates);
                 table.reload = ReloadHook::load(service_group, &hooks_path, &templates);
                 table.reconfigure = ReconfigureHook::load(service_group, &hooks_path, &templates);
                 table.run = RunHook::load(service_group, &hooks_path, &templates);
@@ -935,6 +937,9 @@ impl HookTable {
             changed = self.compile_one(hook, service_group, ctx) || changed;
         }
         if let Some(ref hook) = self.init {
+            changed = self.compile_one(hook, service_group, ctx) || changed;
+        }
+        if let Some(ref hook) = self.install {
             changed = self.compile_one(hook, service_group, ctx) || changed;
         }
         if let Some(ref hook) = self.reload {

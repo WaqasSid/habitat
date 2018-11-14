@@ -214,6 +214,7 @@ fn start(ui: &mut UI) -> Result<()> {
             ("binlink", Some(m)) => sub_pkg_binlink(ui, m)?,
             ("build", Some(m)) => sub_pkg_build(ui, m)?,
             ("channels", Some(m)) => sub_pkg_channels(ui, m)?,
+            ("compile", Some(m)) => sub_pkg_compile(ui, m)?,
             ("config", Some(m)) => sub_pkg_config(m)?,
             ("dependencies", Some(m)) => sub_pkg_dependencies(m)?,
             ("env", Some(m)) => sub_pkg_env(m)?,
@@ -465,6 +466,12 @@ fn sub_pkg_binds(m: &ArgMatches) -> Result<()> {
 
     common::command::package::binds::start(&ident, &*FS_ROOT)?;
     Ok(())
+}
+
+fn sub_pkg_compile(ui: &mut UI, m: &ArgMatches) -> Result<()> {
+    let ident = PackageIdent::from_str(m.value_of("PKG_IDENT").unwrap())?;
+
+    command::pkg::compile::start(ui, &ident, &*FS_ROOT)
 }
 
 fn sub_pkg_dependencies(m: &ArgMatches) -> Result<()> {

@@ -839,28 +839,20 @@ impl<'a> InstallTask<'a> {
     where
         T: UIWriter,
     {
+        templating::compile_from_package_install(package)?;
         let pkg = templating::package::Pkg::from_install(package.clone())?;
         let service_group = ServiceGroup::new(None, pkg.name.clone(), "_", None)?;
-
-        if let Some(hook) = templating::hooks::InstallHook::load(
+        let hooks = templating::hooks::HookTable::load(
             &service_group,
-            templating::fs::svc_hooks_path(&service_group.service()),
             pkg.path.join("hooks"),
-        ) {
+            templating::fs::svc_hooks_path(&service_group.service()),
+        );
+
+        if let Some(ref hook) = hooks.install {
             ui.status(
                 Status::Applying,
                 format!("executing install hook for '{}'", &pkg.ident,),
             )?;
-
-            templating::dir::SvcDir::new(&pkg).create()?;
-
-            let cfg = templating::config::Cfg::new(&pkg, None)?;
-            let ctx = templating::RenderContext::new(&pkg, &cfg);
-
-            let cfg_renderer = templating::config::CfgRenderer::new(pkg.path.join("config"))?;
-            cfg_renderer.compile(&pkg, &ctx)?;
-
-            hook.compile(&service_group, &ctx)?;
             hook.run(&service_group, &pkg, None::<String>);
             ui.status(
                 Status::Installed,
