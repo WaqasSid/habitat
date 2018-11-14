@@ -35,7 +35,7 @@ steps:
           propagate-environment: true
           volumes:
             - "C:\\buildkite-agent\\bin:C:\\buildkite-agent\\bin"
-            - ".:/c/workdir"
+            - ".:/workdir"
 
   - label: ":mac: :habicat: core/hab"
     command: .buildkite/scripts/build_mac_release.sh
