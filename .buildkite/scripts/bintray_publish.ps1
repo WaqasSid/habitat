@@ -21,6 +21,12 @@ Write-Host "--- Installing base habitat binary version: $BaseHabVersion"
 $baseHabExe = [HabShared]::install_base_habitat_binary($BaseHabVersion, $SourceChannel)
 Write-Host "--- Using hab executable at $baseHabExe"
 
+# install buildkite agent because we are in a container :(
+Write-Host "--- Installing the buildkite-agent so we can do metadata stuff"
+Set-Item Env:buildkiteAgentToken -Value "faketoken"
+Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/buildkite/agent/master/install.ps1'))
+Remove-Item Env:buildkiteAgentToken    
+
 $thingy = Invoke-Expression "buildkite-agent meta-data get 'version'"
 Write-Host "THING: $thingy"
 

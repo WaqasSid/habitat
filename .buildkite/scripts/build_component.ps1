@@ -23,17 +23,8 @@ Set-Item Env:buildkiteAgentToken -Value "faketoken"
 Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/buildkite/agent/master/install.ps1'))
 Remove-Item Env:buildkiteAgentToken
 
-$thingy = Get-ChildItem -Path "C:\" -Filter "buildkite-agent.exe" -Recurse -ErrorAction SilentlyContinue -Force
-Write-Host "--- THING: $thingy"
-
-$thing2 = Invoke-Expression "dir c:\"
-Write-Host "--- THING2: $thing2"
-
-$thing3 = Invoke-Expression "buildkite-agent --version"
-Write-Host "--- THING3: $thing3"
-
-# $versionz = Invoke-Expression ""
-
+$thingy = Invoke-Expression "buildkite-agent meta-data get 'version'"
+Write-Host "THING: $thingy"
 
 # Write-Host "--- Setting source package channel to $SourceChannel"
 # $Env:HAB_BLDR_CHANNEL="$SourceChannel"
