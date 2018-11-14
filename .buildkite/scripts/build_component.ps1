@@ -37,11 +37,11 @@ New-Item -ItemType directory -Path C:\build
 Copy-Item -Path C:\workdir\* -Destination C:\build -Recurse
 
 Push-Location "C:\build"
-Write-Host "Running hab pkg build for $Component"
-Invoke-Expression "$baseHabExe pkg build components\$Component --keys core" -ErrorAction Stop
-. "components\$Component\habitat\results\last_build.ps1"
-Write-Host "Running hab pkg upload for $Component"
-Invoke-Expression "$baseHabExe pkg upload components\$Component\habitat\results\$pkg_artifact" -ErrorAction Stop
+    Write-Host "--- Running hab pkg build for $Component"
+    Invoke-Expression "$baseHabExe pkg build components\$Component --keys core" -ErrorAction Stop
+    . "components\$Component\habitat\results\last_build.ps1"
+    Write-Host "Running hab pkg upload for $Component"
+    Invoke-Expression "$baseHabExe pkg upload components\$Component\habitat\results\$pkg_artifact" -ErrorAction Stop
 Pop-Location
 
 exit $LASTEXITCODE
