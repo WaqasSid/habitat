@@ -19,10 +19,15 @@ if($Component.Equals("")) {
 }
 
 $thingy = Get-ChildItem -Path "C:\" -Filter "buildkite-agent" -Recurse -ErrorAction SilentlyContinue -Force
-Write-Host "THING: $thingy"
+Write-Host "--- THING: $thingy"
 
 $thing2 = Invoke-Expression "dir c:\"
-Write-Host "THING2: $thing2"
+Write-Host "--- THING2: $thing2"
+
+$thing3 = Invoke-Expression "pwd"
+Write-Host "--- THING3: $thing3"
+
+# $versionz = Invoke-Expression ""
 
 
 # Write-Host "--- Setting source package channel to $SourceChannel"
