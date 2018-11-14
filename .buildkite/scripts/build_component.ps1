@@ -21,13 +21,13 @@ if($Component.Equals("")) {
 # install buildkite agent because we are in a container :(
 Invoke-Expression "((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/buildkite/agent/master/install.ps1'))"
 
-$thingy = Get-ChildItem -Path "C:\" -Filter "buildkite-agent" -Recurse -ErrorAction SilentlyContinue -Force
+$thingy = Get-ChildItem -Path "C:\" -Filter "buildkite-agent.exe" -Recurse -ErrorAction SilentlyContinue -Force
 Write-Host "--- THING: $thingy"
 
 $thing2 = Invoke-Expression "dir c:\"
 Write-Host "--- THING2: $thing2"
 
-$thing3 = Invoke-Expression "pwd"
+$thing3 = Invoke-Expression "buildkite-agent --version"
 Write-Host "--- THING3: $thing3"
 
 # $versionz = Invoke-Expression ""
