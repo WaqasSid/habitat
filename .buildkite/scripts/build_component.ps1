@@ -18,10 +18,9 @@ if($Component.Equals("")) {
     Write-Error "--- :error: Component to build not specified, please use the -Component flag" -ErrorAction Stop
 }
 
-$thingy = Invoke-Expression "buildkite-agent meta-data get 'version'"
+$thingy = Get-ChildItem -Path "C:\" -Filter "buildkite-agent.exe" -Recurse -ErrorAction SilentlyContinue -Force
 Write-Host "THING: $thingy"
 
-Exit-PSSession
 
 Write-Host "--- Setting source package channel to $SourceChannel"
 $Env:HAB_BLDR_CHANNEL="$SourceChannel"
