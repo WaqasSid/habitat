@@ -19,13 +19,12 @@ if($Component.Equals("")) {
 }
 
 # install buildkite agent because we are in a container :(
-Set-Item Env:buildkiteAgentToken -Value "faketoken"
+$Env:BUILDKITE_AGENT_ACCESS_TOKEN
 Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/buildkite/agent/master/install.ps1'))
-Remove-Item Env:buildkiteAgentToken
 
 
-$thingy = Invoke-Expression "buildkite-agent meta-data get version --job $Env:BUILDKITE_AGENT_ACCESS_TOKEN"
-Write-Host "THING: $thingy and job $Env:BUILDKITE_AGENT_ACCESS_TOKEN"
+$thingy = Invoke-Expression "buildkite-agent meta-data get version --job $Env:BUILDKITE_JOB_ID"
+Write-Host "THING: $thingy and job $Env:BUILDKITE_JOB_ID"
 
 # Write-Host "--- Setting source package channel to $SourceChannel"
 # $Env:HAB_BLDR_CHANNEL="$SourceChannel"
