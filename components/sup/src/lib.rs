@@ -97,6 +97,11 @@ extern crate valico;
 #[cfg(test)]
 extern crate json;
 
+// For testing with the locked_env_var macro
+#[cfg(test)]
+#[macro_use]
+extern crate habitat_common;
+
 #[macro_export]
 /// Creates a new SupError, embedding the current file name, line number, column, and module path.
 macro_rules! sup_error {
@@ -106,9 +111,6 @@ macro_rules! sup_error {
     }};
 }
 
-#[cfg(test)]
-#[macro_use]
-pub mod locked_env_var;
 #[cfg(test)]
 #[macro_use]
 pub mod cli_test_helpers;
