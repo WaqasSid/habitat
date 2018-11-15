@@ -15,6 +15,7 @@
 extern crate ansi_term;
 extern crate clap;
 extern crate env_logger;
+#[cfg_attr(test, macro_use)]
 extern crate habitat_common as common;
 #[macro_use]
 extern crate habitat_core as hcore;
@@ -33,11 +34,6 @@ extern crate tempfile;
 extern crate time;
 extern crate tokio_core;
 extern crate url;
-
-// For testing with the locked_env_var macro
-#[cfg(test)]
-#[macro_use]
-extern crate habitat_common;
 
 use std::env;
 use std::io::{self, Write};

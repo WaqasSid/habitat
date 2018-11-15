@@ -58,6 +58,7 @@ extern crate futures;
 extern crate glob;
 extern crate hab;
 extern crate habitat_butterfly as butterfly;
+#[cfg_attr(test, macro_use)]
 extern crate habitat_common as common;
 #[macro_use]
 extern crate habitat_core as hcore;
@@ -96,11 +97,6 @@ extern crate valico;
 
 #[cfg(test)]
 extern crate json;
-
-// For testing with the locked_env_var macro
-#[cfg(test)]
-#[macro_use]
-extern crate habitat_common;
 
 #[macro_export]
 /// Creates a new SupError, embedding the current file name, line number, column, and module path.
