@@ -643,7 +643,6 @@ fn sub_pkg_install(ui: &mut UI, m: &ArgMatches) -> Result<()> {
     let install_sources = install_sources_from_matches(m)?;
     let token = maybe_auth_token(&m);
     let install_hook_mode = get_install_hook_mode_from_input(m).unwrap_or_default();
-    println!("install hook mode is: {:?}", install_hook_mode);
     let install_mode = if feat::is_enabled(feat::OfflineInstall) && m.is_present("OFFLINE") {
         InstallMode::Offline
     } else {

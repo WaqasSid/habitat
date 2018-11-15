@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod context;
-pub mod helpers;
 pub mod config;
+mod context;
 pub mod dir;
 pub mod fs;
 pub mod health;
+pub mod helpers;
 pub mod hooks;
 pub mod package;
 pub mod path;
@@ -31,26 +31,21 @@ use handlebars::{Handlebars, RenderError};
 use serde::Serialize;
 use serde_json;
 
-use hcore::package::PackageInstall;
 pub use self::context::RenderContext;
 use error::{Error, Result};
+use hcore::package::PackageInstall;
 
 pub fn compile_from_package_install(package: &PackageInstall) -> Result<()> {
     let pkg = package::Pkg::from_install(package.clone())?;
-    let hooks = hooks::HookTable::load(
-        &pkg.name,
-        pkg.path.join("hooks"),
-        fs::svc_hooks_path(&pkg.name),
-    );
-
 
     dir::SvcDir::new(&pkg).create()?;
 
     let cfg = config::Cfg::new(&pkg, None)?;
     let ctx = RenderContext::new(&pkg, &cfg);
     let cfg_renderer = config::CfgRenderer::new(pkg.path.join("config"))?;
-    cfg_renderer.compile(&pkg, &ctx)?;
-    hooks.compile(&pkg.name, &ctx);
+    cfg_renderer.compile(&pkg.name, &pkg, &ctx)?;
+
+    hooks::HookTable::from_package_install(package).compile(&pkg.name, &ctx);
 
     Ok(())
 }
@@ -81,8 +76,7 @@ impl TemplateRenderer {
     where
         T: Serialize,
     {
-        let raw = serde_json::to_value(ctx)
-            .map_err(|e| Error::RenderContextSerialization(e))?;
+        let raw = serde_json::to_value(ctx).map_err(|e| Error::RenderContextSerialization(e))?;
         debug!("Rendering template with context, {}, {}", template, raw);
         self.0
             .render(template, &raw)

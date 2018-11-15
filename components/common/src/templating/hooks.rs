@@ -25,12 +25,13 @@ use std::process::{Child, ExitStatus};
 use std::result;
 
 use hcore::{self, crypto};
+use hcore::package::PackageInstall;
 use serde::{Serialize, Serializer};
 
-use error::{Error, Result};
-use super::{fs, health, RenderContext, TemplateRenderer};
 use super::package::Pkg;
 use super::sys::exec;
+use super::{fs, health, TemplateRenderer};
+use error::{Error, Result};
 
 #[cfg(not(windows))]
 pub const HOOK_PERMISSIONS: u32 = 0o755;
@@ -98,7 +99,10 @@ pub trait Hook: fmt::Debug + Sized {
     /// Compile a hook into its destination service directory.
     ///
     /// Returns `true` if the hook has changed.
-    fn compile(&self, service_group: &str, ctx: &RenderContext) -> Result<bool> {
+    fn compile<T>(&self, service_group: &str, ctx: &T) -> Result<bool>
+    where
+        T: Serialize,
+    {
         let content = self.renderer().render(Self::file_name(), ctx)?;
         if write_hook(&content, self.path())? {
             outputln!(preamble service_group,
@@ -198,12 +202,7 @@ impl Hook for FileUpdatedHook {
         }
     }
 
-    fn handle_exit<'a>(
-        &self,
-        _: &str,
-        _: &'a HookOutput,
-        status: &ExitStatus,
-    ) -> Self::ExitValue {
+    fn handle_exit<'a>(&self, _: &str, _: &'a HookOutput, status: &ExitStatus) -> Self::ExitValue {
         status.success()
     }
 
@@ -922,11 +921,22 @@ impl HookTable {
         table
     }
 
+    pub fn from_package_install(package: &PackageInstall) -> Self {
+        Self::load(
+            &package.ident.name,
+            package.installed_path.join("hooks"),
+            fs::svc_hooks_path(package.ident.name.clone()),
+        )
+    }
+
     /// Compile all loaded hooks from the table into their destination service directory.
     ///
     /// Returns `true` if compiling any of the hooks resulted in new
     /// content being written to the hook scripts on disk.
-    pub fn compile(&self, service_group: &str, ctx: &RenderContext) -> bool {
+    pub fn compile<T>(&self, service_group: &str, ctx: &T) -> bool
+    where
+        T: Serialize,
+    {
         debug!("{:?}", self);
         let mut changed = false;
         if let Some(ref hook) = self.file_updated {
@@ -965,9 +975,10 @@ impl HookTable {
         changed
     }
 
-    fn compile_one<H>(&self, hook: &H, service_group: &str, ctx: &RenderContext) -> bool
+    fn compile_one<H,T>(&self, hook: &H, service_group: &str, ctx: &T) -> bool
     where
         H: Hook,
+        T: Serialize,
     {
         match hook.compile(service_group, ctx) {
             Ok(status) => status,

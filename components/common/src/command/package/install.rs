@@ -470,6 +470,9 @@ impl<'a> InstallTask<'a> {
             Some(package_install) => {
                 // The installed package was found on disk
                 ui.status(Status::Using, &target_ident)?;
+                if self.install_hook_mode == &InstallHookMode::Force {
+                    self.run_all_install_hooks(ui, &target_ident, target, token)?;
+                }
                 ui.end(format!(
                     "Install of {} complete with {} new packages installed.",
                     &target_ident, 0
@@ -501,12 +504,7 @@ impl<'a> InstallTask<'a> {
                 // The installed package was found on disk
                 ui.status(Status::Using, &target_ident)?;
                 if self.install_hook_mode == &InstallHookMode::Force {
-                    self.run_all_install_hooks(
-                        ui,
-                        &target_ident,
-                        &local_archive.target,
-                        token,                        
-                    )?;
+                    self.run_all_install_hooks(ui, &target_ident, &local_archive.target, token)?;
                 }
                 ui.end(format!(
                     "Install of {} complete with {} new packages installed.",
@@ -517,12 +515,7 @@ impl<'a> InstallTask<'a> {
             None => {
                 // No installed package was found
                 self.store_artifact_in_cache(&target_ident, &local_archive.path)?;
-                self.install_package(
-                    ui,
-                    &target_ident,
-                    &local_archive.target,
-                    token,
-                )
+                self.install_package(ui, &target_ident, &local_archive.target, token)
             }
         }
     }
@@ -838,23 +831,22 @@ impl<'a> InstallTask<'a> {
     where
         T: UIWriter,
     {
-        templating::compile_from_package_install(package)?;
-        let pkg = templating::package::Pkg::from_install(package.clone())?;
-        let hooks = templating::hooks::HookTable::load(
-            &pkg.name,
-            pkg.path.join("hooks"),
-            templating::fs::svc_hooks_path(&pkg.name),
-        );
+        let hooks = templating::hooks::HookTable::from_package_install(package);
 
         if let Some(ref hook) = hooks.install {
             ui.status(
                 Status::Applying,
-                format!("executing install hook for '{}'", &pkg.ident,),
+                format!("executing install hook for '{}'", &package.ident(),),
             )?;
-            hook.run(&pkg.name, &pkg, None::<String>);
+            templating::compile_from_package_install(package)?;
+            hook.run(
+                &package.ident().name,
+                &templating::package::Pkg::from_install(package.clone())?,
+                None::<String>,
+            );
             ui.status(
                 Status::Installed,
-                format!("install hook for '{}' completed", &pkg.ident,),
+                format!("install hook for '{}' completed", &package.ident(),),
             )?;
         }
         Ok(())

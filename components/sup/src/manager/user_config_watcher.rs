@@ -28,7 +28,7 @@ use super::file_watcher::{default_file_watcher_with_no_initial_event, Callbacks}
 use hcore::fs::USER_CONFIG_FILE;
 use hcore::service::ServiceGroup;
 use manager::service::Service;
-use manager::service::UserConfigPath;
+use common::templating::config::UserConfigPath;
 
 static LOGKEY: &'static str = "UCW";
 

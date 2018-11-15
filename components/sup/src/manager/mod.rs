@@ -67,7 +67,9 @@ use toml;
 
 use self::peer_watcher::PeerWatcher;
 use self::self_updater::{SelfUpdater, SUP_PKG_IDENT};
-use self::service::{health::HealthCheck, DesiredState, IntoServiceSpec, Pkg, ProcessState};
+use common::templating::health::HealthCheck;
+pub use common::templating::package::Pkg;
+use self::service::{DesiredState, IntoServiceSpec, ProcessState};
 pub use self::service::{
     CompositeSpec, ConfigRendering, Service, ServiceBind, ServiceProxy, ServiceSpec, Spec,
     Topology, UpdateStrategy,

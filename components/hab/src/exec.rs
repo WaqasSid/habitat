@@ -15,7 +15,7 @@
 use std::path::{Path, PathBuf};
 
 use common;
-use common::command::package::install::{InstallMode, InstallHookMode, LocalPackageUsage};
+use common::command::package::install::{InstallHookMode, InstallMode, LocalPackageUsage};
 use common::ui::{Status, UIWriter, UI};
 use hcore::env as henv;
 use hcore::fs::{self, cache_artifact_path, FS_ROOT_PATH};

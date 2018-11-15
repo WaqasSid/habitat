@@ -36,8 +36,8 @@ use time::{self, Timespec};
 use super::ProcessState;
 use super::ShutdownReason;
 use error::{Error, Result};
-use fs;
-use manager::service::Pkg;
+use common::templating::fs;
+use common::templating::package::Pkg;
 #[cfg(unix)]
 use sys::abilities;
 

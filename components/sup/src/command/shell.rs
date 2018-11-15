@@ -21,7 +21,7 @@ use hcore::fs::find_command;
 use libc;
 
 use error::{Error, Result};
-use util::path;
+use common::templating::path;
 
 /// Our output key
 static LOGKEY: &'static str = "SH";

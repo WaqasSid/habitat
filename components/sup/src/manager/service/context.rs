@@ -62,7 +62,9 @@ use hcore::package::PackageIdent;
 use hcore::service::ServiceGroup;
 
 use census::{CensusGroup, CensusMember, CensusRing, ElectionStatus, MemberId};
-use manager::service::{Cfg, Env, Pkg, ServiceBind};
+use common::templating::package::{Env, Pkg};
+use common::templating::config::Cfg;
+use manager::service::ServiceBind;
 use manager::Sys;
 
 /// The context of a rendering call, exposing information on the

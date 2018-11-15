@@ -15,6 +15,7 @@
 #![cfg_attr(feature = "clippy", feature(plugin))]
 #![cfg_attr(feature = "clippy", plugin(clippy))]
 
+extern crate actix_web;
 extern crate ansi_term;
 extern crate glob;
 extern crate habitat_api_client as api_client;

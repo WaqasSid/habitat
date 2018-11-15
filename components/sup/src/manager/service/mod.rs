@@ -13,11 +13,7 @@
 // limitations under the License.
 
 mod composite_spec;
-pub mod config;
-mod dir;
-pub mod health;
-pub mod hooks;
-mod package;
+mod context;
 pub mod spec;
 mod supervisor;
 
@@ -45,21 +41,21 @@ use serde::{Serialize, Serializer};
 use time::Timespec;
 
 pub use self::composite_spec::CompositeSpec;
-use self::config::CfgRenderer;
-pub use self::config::{Cfg, UserConfigPath};
-use self::dir::SvcDir;
-pub use self::health::{HealthCheck, SmokeCheck};
-use self::hooks::{Hook, HookTable};
-pub use self::package::{Env, Pkg, PkgProxy};
+use self::context::RenderContext;
 pub use self::spec::{BindMap, DesiredState, IntoServiceSpec, ServiceBind, ServiceSpec, Spec};
 use self::supervisor::Supervisor;
 use super::ShutdownReason;
 use super::Sys;
 use census::{CensusGroup, CensusRing, ElectionStatus, ServiceFile};
+use common::templating::config::CfgRenderer;
+pub use common::templating::config::{Cfg, UserConfigPath};
+use common::templating::dir::SvcDir;
+pub use common::templating::health::{HealthCheck, SmokeCheck};
+use common::templating::hooks::{self, Hook, HookTable};
+pub use common::templating::package::{Env, Pkg, PkgProxy};
 use error::{Error, Result, SupError};
-use fs;
+use common::templating::fs;
 use manager;
-use templating::RenderContext;
 
 static LOGKEY: &'static str = "SR";
 
@@ -258,7 +254,7 @@ impl Service {
     /// Create the service path for this package.
     pub fn create_svc_path(&self) -> Result<()> {
         debug!("{}, Creating svc paths", self.service_group);
-        SvcDir::new(&self.pkg).create()
+        Ok(SvcDir::new(&self.pkg).create()?)
     }
 
     fn start(&mut self, launcher: &LauncherCli) {
@@ -568,6 +564,24 @@ impl Service {
         self.supervisor.state == ProcessState::Down
     }
 
+    /// Updates the service configuration with data from a census group if the census group has
+    /// newer data than the current configuration.
+    ///
+    /// Returns `true` if the configuration was updated.
+    fn update_gossip(&mut self, census_group: &CensusGroup) -> bool {
+        match census_group.service_config {
+            Some(ref config) => {
+                if config.incarnation <= self.cfg.gossip_incarnation {
+                    return false;
+                }
+                self.cfg
+                    .set_gossip(config.incarnation, config.value.clone());
+                true
+            }
+            None => false,
+        }
+    }
+
     /// Compares the current state of the service to the current state of the census ring and the
     /// user-config, and re-renders all templatable content to disk.
     ///
@@ -576,7 +590,7 @@ impl Service {
         let census_group = census_ring
             .census_group_for(&self.service_group)
             .expect("Service update failed; unable to find own service group");
-        let cfg_updated_from_rumors = self.cfg.update(census_group);
+        let cfg_updated_from_rumors = self.update_gossip(census_group);
         let cfg_changed =
             self.defaults_updated || cfg_updated_from_rumors || self.user_config_updated;
 
@@ -760,7 +774,10 @@ impl Service {
     ///
     /// Returns `true` if the configuration has changed.
     fn compile_configuration(&self, ctx: &RenderContext) -> bool {
-        match self.config_renderer.compile(&self.pkg, ctx) {
+        match self
+            .config_renderer
+            .compile(&ctx.service_group_name(), &self.pkg, ctx)
+        {
             Ok(true) => true,
             Ok(false) => false,
             Err(e) => {

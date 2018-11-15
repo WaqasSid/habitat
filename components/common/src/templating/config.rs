@@ -31,7 +31,7 @@ use toml;
 
 //use census::CensusGroup;
 use error::{Error, Result};
-use super::{fs, RenderContext, TemplateRenderer};
+use super::{fs, TemplateRenderer};
 use super::package::Pkg;
 
 static LOGKEY: &'static str = "CF";
@@ -109,11 +109,11 @@ pub struct Cfg {
     pub environment: Option<toml::value::Table>,
     /// Source of the user configuration
     pub user_config_path: UserConfigPath,
+    /// Last known incarnation number of the census group's service config
+    pub gossip_incarnation: u64,
     /// The path to an optional dev-time configuration directory that
     /// is being used.
     override_config_dir: Option<PathBuf>,
-    /// Last known incarnation number of the census group's service config
-    gossip_incarnation: u64,
 }
 
 impl Cfg {
@@ -207,23 +207,11 @@ impl Cfg {
         Ok(changed)
     }
 
-    /// Updates the service configuration with data from a census group if the census group has
-    /// newer data than the current configuration.
-    ///
-    /// Returns `true` if the configuration was updated.
-    // pub fn update(&mut self, census_group: &CensusGroup) -> bool {
-    //     match census_group.service_config {
-    //         Some(ref config) => {
-    //             if config.incarnation <= self.gossip_incarnation {
-    //                 return false;
-    //             }
-    //             self.gossip_incarnation = config.incarnation;
-    //             self.gossip = Some(config.value.clone());
-    //             true
-    //         }
-    //         None => false,
-    //     }
-    // }
+    /// Updates the service configuration with data from a census group
+    pub fn set_gossip(&mut self, incarnation: u64, gossip: toml::value::Table) {
+        self.gossip_incarnation = incarnation;
+        self.gossip = Some(gossip);
+    }
 
     /// Returns a subset of the overall configuration which intersects with the given package's exports.
     pub fn to_exported(&self, pkg: &Pkg) -> Result<toml::value::Table> {
@@ -498,7 +486,10 @@ impl CfgRenderer {
     /// Compile and write all configuration files to the configuration directory.
     ///
     /// Returns `true` if the configuration has changed.
-    pub fn compile(&self, pkg: &Pkg, ctx: &RenderContext) -> Result<bool> {
+    pub fn compile<T>(&self, service_group_name: &str, pkg: &Pkg, ctx: &T) -> Result<bool>
+    where
+        T: Serialize,
+    {
         // JW TODO: This function is loaded with IO errors that will be converted a Supervisor
         // error resulting in the end-user not knowing what the fuck happned at all. We need to go
         // through this and pipe the service group through to let people know which service is
@@ -525,7 +516,7 @@ impl CfgRenderer {
                 let mut config_file = File::create(&cfg_dest)?;
                 config_file.write_all(&compiled.into_bytes())?;
                 outputln!(
-                    preamble pkg.name,
+                    preamble service_group_name,
                     "Created configuration file {}",
                     cfg_dest.display()
                 );
@@ -547,7 +538,7 @@ impl CfgRenderer {
                         cfg_dest.display()
                     );
                     outputln!(
-                        preamble pkg.name,
+                        preamble service_group_name,
                         "Modified configuration content in {}",
                         cfg_dest.display()
                     );
