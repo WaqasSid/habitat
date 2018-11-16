@@ -22,15 +22,16 @@ $baseHabExe = [HabShared]::install_base_habitat_binary($BaseHabVersion, $SourceC
 Write-Host "--- Using hab executable at $baseHabExe"
 
 # install buildkite agent because we are in a container :(
-Write-Host "--- Installing the buildkite-agent so we can do metadata stuff"
-Set-Item Env:buildkiteAgentToken -Value "faketoken"
+$Env:buildkiteAgentToken = $Env:BUILDKITE_AGENT_ACCESS_TOKEN
 Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/buildkite/agent/master/install.ps1'))
-Remove-Item Env:buildkiteAgentToken    
 
-$thingy = Invoke-Expression "buildkite-agent meta-data get 'version'"
-Write-Host "THING: $thingy"
 
-# Invoke-WebRequest "https://api.habitat.sh/v1/depot/pkgs/core/hab/0.68.1-dev/latest?target=x86_64-windows"
+$BuildVersion = Invoke-Expression "buildkite-agent meta-data get version --job $Env:BUILDKITE_JOB_ID"
+Write-Host "THING: $BuildVersion and job $Env:BUILDKITE_JOB_ID"
+
+echo "--- :windows: Publishing Windows 'hab' ${version}-${release}"
+$bintray_repository="unstable"
+publish "https://api.bintray.com/content/habitat/${bintray_repository}/hab-x86_64-windows/${version}-${release}/publish"
 
 
 # exit $LASTEXITCODE
